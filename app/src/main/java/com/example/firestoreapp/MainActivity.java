@@ -9,13 +9,16 @@ import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -54,10 +57,33 @@ public class MainActivity extends AppCompatActivity {
         getBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                GetDataFromFirestore();
+                //GetDataFromFirestore();
+                Toast.makeText(getApplicationContext(), "Func off", Toast.LENGTH_SHORT).show();
             }
         });
 
+    }
+
+    @Override
+    protected void onStart(){
+        super.onStart();
+
+        databaseReference.addSnapshotListener(this,
+                new EventListener<DocumentSnapshot>() {
+                    @Override
+                    public void onEvent(@Nullable DocumentSnapshot value, @Nullable FirebaseFirestoreException error) {
+
+                        if (error != null) {
+                            Toast.makeText(getApplicationContext(), "Error", Toast.LENGTH_SHORT).show();
+                        }
+                        if (value != null && value.exists()) {
+                            String friend_name = value.getString(KEY_NAME);
+                            String friend_email = value.getString(KEY_EMAIL);
+
+                            textView.setText("Name: " + friend_name + "\nEmail: " + friend_email);
+                        }
+                    }
+                });
     }
 
     private void GetDataFromFirestore() {
@@ -69,7 +95,6 @@ public class MainActivity extends AppCompatActivity {
                         if (documentSnapshot.exists()) {
                             String friend_name = documentSnapshot.getString(KEY_NAME);
                             String friend_email = documentSnapshot.getString(KEY_EMAIL);
-
                             textView.setText("Name: " + friend_name + "\nEmail: " + friend_email);
                         }
                     }
@@ -91,6 +116,8 @@ public class MainActivity extends AppCompatActivity {
         Map<String, Object> data = new HashMap<>();
         data.put(KEY_NAME, name);
         data.put(KEY_EMAIL, email);
+
+
 
         database.collection("Users")
                 .document("Friends")
