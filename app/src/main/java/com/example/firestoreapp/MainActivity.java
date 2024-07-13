@@ -1,6 +1,7 @@
 package com.example.firestoreapp;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -9,19 +10,18 @@ import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 
-import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,6 +33,8 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseFirestore database = FirebaseFirestore.getInstance();
     private DocumentReference databaseReference = database.collection("Users")
             .document("Friends");
+
+    private CollectionReference collectionReference = database.collection("Users");
 
     public static final String KEY_NAME = "name";
     public static final String KEY_EMAIL = "email";
@@ -56,7 +58,9 @@ public class MainActivity extends AppCompatActivity {
         setBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                SaveDataToFirestore();
+                //SaveDataToFirestore();
+
+                SaveDataToNewDocument();
             }
         });
 
@@ -64,7 +68,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 //GetDataFromFirestore();
-                Toast.makeText(getApplicationContext(), "Function off", Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getApplicationContext(), "Function off", Toast.LENGTH_SHORT).show();
+
+                GetDocuments();
             }
         });
 
@@ -74,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
                 UpdateData();
             }
         });
-        
+
         delBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -84,10 +90,38 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    private void GetDocuments() {
+        collectionReference.get()
+                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                    @Override
+                    public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+
+                        String data = "";
+
+                        for (QueryDocumentSnapshot snapshot : queryDocumentSnapshots) {
+                            User user = snapshot.toObject(User.class);
+                            data += "Name: " + user.getName() + " Email: " + user.getEmail() + "\n";
+                        }
+
+                        textView.setText(data);
+                    }
+                });
+    }
+
+    private void SaveDataToNewDocument() {
+
+        String name = nameET.getText().toString();
+        String email = emailET.getText().toString();
+
+        User user = new User(name, email);
+
+        collectionReference.add(user);
+
+    }
+
     private void DeleteData() {
 
-        databaseReference.update(KEY_NAME, FieldValue.delete());
-
+        databaseReference.delete();
     }
 
     private void UpdateData() {
@@ -120,25 +154,28 @@ public class MainActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
 
-        databaseReference.addSnapshotListener(this,
-                new EventListener<DocumentSnapshot>() {
-                    @Override
-                    public void onEvent(@Nullable DocumentSnapshot value, @Nullable FirebaseFirestoreException error) {
+        GetDocuments();
 
-                        if (error != null) {
-                            Toast.makeText(getApplicationContext(), "Error", Toast.LENGTH_SHORT).show();
-                        }
-                        if (value != null && value.exists()) {
-                            String friend_name = value.getString(KEY_NAME);
-                            String friend_email = value.getString(KEY_EMAIL);
-
-                            old_name = friend_name;
-                            old_email = friend_email;
-
-                            textView.setText("Name: " + friend_name + "\nEmail: " + friend_email);
-                        }
-                    }
-                });
+//        databaseReference.addSnapshotListener(this,
+//                new EventListener<DocumentSnapshot>() {
+//                    @Override
+//                    public void onEvent(@Nullable DocumentSnapshot value, @Nullable FirebaseFirestoreException error) {
+//
+//                        if (error != null) {
+//                            Toast.makeText(getApplicationContext(), "Error", Toast.LENGTH_SHORT).show();
+//                        }
+//                        if (value != null && value.exists()) {
+//
+////                            String friend_name = value.getString(KEY_NAME);
+////                            String friend_email = value.getString(KEY_EMAIL);
+//
+//                            // get user
+//                            User user = value.toObject(User.class);
+//
+//                            textView.setText("Name: " + user.getName() + "\nEmail: " + user.getEmail());
+//                        }
+//                    }
+//                });
     }
 
     private void GetDataFromFirestore() {
@@ -153,28 +190,25 @@ public class MainActivity extends AppCompatActivity {
                             textView.setText("Name: " + friend_name + "\nEmail: " + friend_email);
                         }
                     }
-                }).addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Toast.makeText(getApplicationContext(), "NO DATA TO GET", Toast.LENGTH_SHORT).show();
-                    }
                 });
-
-
     }
 
     private void SaveDataToFirestore() {
 
         String name = nameET.getText().toString().trim();
         String email = emailET.getText().toString().trim();
-        Map<String, Object> data = new HashMap<>();
 
-        data.put(KEY_NAME, name);
-        data.put(KEY_EMAIL, email);
+        User user = new User();
+        user.setName(name);
+        user.setEmail(email);
+
+//        Map<String, Object> data = new HashMap<>();
+//        data.put(KEY_NAME, name);
+//        data.put(KEY_EMAIL, email);
 
         database.collection("Users")
                 .document("Friends")
-                .set(data)
+                .set(user)
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void unused) {
@@ -187,6 +221,5 @@ public class MainActivity extends AppCompatActivity {
                         Toast.makeText(getApplicationContext(), "WE GOT PROBLEMS", Toast.LENGTH_SHORT);
                     }
                 });
-
     }
 }
