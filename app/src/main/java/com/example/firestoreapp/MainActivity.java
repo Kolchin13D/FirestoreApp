@@ -17,16 +17,18 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
     EditText nameET, emailET;
-    Button getBtn, setBtn;
+    Button getBtn, setBtn, updBtn, delBtn;
     TextView textView;
     private FirebaseFirestore database = FirebaseFirestore.getInstance();
     private DocumentReference databaseReference = database.collection("Users")
@@ -34,6 +36,8 @@ public class MainActivity extends AppCompatActivity {
 
     public static final String KEY_NAME = "name";
     public static final String KEY_EMAIL = "email";
+
+    public String old_name, old_email;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,6 +50,8 @@ public class MainActivity extends AppCompatActivity {
         setBtn = findViewById(R.id.setBtn);
         textView = findViewById(R.id.text);
         getBtn = findViewById(R.id.getBtn);
+        updBtn = findViewById(R.id.updBtn);
+        delBtn = findViewById(R.id.delBtn);
 
         setBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -58,14 +64,60 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 //GetDataFromFirestore();
-                Toast.makeText(getApplicationContext(), "Func off", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), "Function off", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        updBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                UpdateData();
+            }
+        });
+        
+        delBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                DeleteData();
             }
         });
 
     }
 
+    private void DeleteData() {
+
+        databaseReference.update(KEY_NAME, FieldValue.delete());
+
+    }
+
+    private void UpdateData() {
+
+        String name = nameET.getText().toString().trim();
+        String email = emailET.getText().toString().trim();
+        Map<String, Object> data = new HashMap<>();
+
+        data.put(KEY_NAME, name);
+        data.put(KEY_EMAIL, email);
+
+        databaseReference.update(data)
+                .addOnSuccessListener(
+                        new OnSuccessListener<Void>() {
+                            @Override
+                            public void onSuccess(Void unused) {
+                                Toast.makeText(getApplicationContext(), "Update OK", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                ).addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+
+                    }
+                });
+
+    }
+
     @Override
-    protected void onStart(){
+    protected void onStart() {
         super.onStart();
 
         databaseReference.addSnapshotListener(this,
@@ -79,6 +131,9 @@ public class MainActivity extends AppCompatActivity {
                         if (value != null && value.exists()) {
                             String friend_name = value.getString(KEY_NAME);
                             String friend_email = value.getString(KEY_EMAIL);
+
+                            old_name = friend_name;
+                            old_email = friend_email;
 
                             textView.setText("Name: " + friend_name + "\nEmail: " + friend_email);
                         }
@@ -112,12 +167,10 @@ public class MainActivity extends AppCompatActivity {
 
         String name = nameET.getText().toString().trim();
         String email = emailET.getText().toString().trim();
-
         Map<String, Object> data = new HashMap<>();
+
         data.put(KEY_NAME, name);
         data.put(KEY_EMAIL, email);
-
-
 
         database.collection("Users")
                 .document("Friends")
